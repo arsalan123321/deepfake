@@ -4,147 +4,31 @@
 <meta charset="UTF-8">
 <title>Wan2.2 Video Studio</title>
 <style>
-  * { box-sizing: border-box; }
-  body { background:#0b0b0f; color:#eee; font-family: -apple-system, sans-serif; margin:0; padding:24px; }
-  .container { max-width: 640px; margin: 0 auto; }
-  h1 { font-size: 20px; margin-bottom: 4px; }
-  .subtitle { color: #888; font-size: 13px; margin-bottom: 24px; }
-  .card { background:#16161d; border:1px solid #2a2a35; border-radius:16px; padding:24px; margin-bottom:20px; }
-  .card h3 { margin-top:0; font-size:14px; text-transform:uppercase; color:#aaa; letter-spacing:0.5px; }
+  body { background:#0b0b0f; color:#eee; font-family: -apple-system, sans-serif; display:flex; justify-content:center; padding-top:80px; }
+  .card { background:#16161d; border:1px solid #2a2a35; border-radius:16px; padding:32px; width:360px; text-align:center; }
   .dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:8px; }
-  .offline { background:#666; } .starting { background:#e0a72e; }
-  .running { background:#2ecc71; } .error { background:#e74c3c; } .stopping { background:#e0a72e; }
-  button { padding:10px 22px; border-radius:10px; border:none; font-size:14px; cursor:pointer; font-weight:600; }
+  .offline { background:#666; }
+  .starting { background:#e0a72e; }
+  .running { background:#2ecc71; }
+  .error { background:#e74c3c; }
+  .stopping { background:#e0a72e; }
+  button { margin-top:20px; padding:12px 28px; border-radius:10px; border:none; font-size:15px; cursor:pointer; }
   .start-btn { background:#3b82f6; color:white; }
   .stop-btn { background:#e74c3c; color:white; }
-  .generate-btn { background:#22c55e; color:white; width:100%; padding:14px; font-size:15px; margin-top:8px; }
-  .generate-btn:disabled { background:#333; color:#777; cursor:not-allowed; }
-  .upload-zone { border:2px dashed #333; border-radius:12px; padding:20px; text-align:center; cursor:pointer; margin-bottom:12px; }
-  .upload-zone.filled { border-color:#22c55e; }
-  .upload-zone input { display:none; }
-  .upload-label { color:#888; font-size:13px; }
-  .row { display:flex; gap:10px; margin-bottom:12px; }
-  .toggle-group { display:flex; gap:8px; }
-  .toggle-btn { flex:1; padding:10px; border-radius:8px; border:1px solid #333; background:#1c1c24; color:#aaa; cursor:pointer; font-size:13px; }
-  .toggle-btn.active { background:#3b82f6; color:white; border-color:#3b82f6; }
-  #tunnel-link { display:block; margin-top:12px; color:#3b82f6; word-break:break-all; font-size:13px; }
-  .preview-thumb { max-width:100%; max-height:120px; border-radius:8px; margin-top:8px; }
-  .hint { font-size:12px; color:#666; margin-top:8px; line-height:1.5; }
+  .hint { font-size:12px; color:#666; margin-top:16px; line-height:1.5; }
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>Wan2.2 Video Studio</h1>
-  <div class="subtitle">Character replacement & animation, powered by Wan2.2 Animate</div>
-
   <div class="card">
-    <h3>GPU Engine</h3>
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <div><span id="status-dot" class="dot offline"></span><span id="status-text">OFFLINE</span></div>
-      <div id="btn-area"></div>
-    </div>
-    <a id="tunnel-link" href="#" target="_blank" style="display:none;"></a>
+    <h2>GPU ENGINE</h2>
+    <div><span id="status-dot" class="dot offline"></span><span id="status-text">OFFLINE</span></div>
+    <div id="btn-area"></div>
+    <div class="hint" id="hint-text">Click Start GPU. Once it's ready, you'll be taken to ComfyUI automatically.</div>
   </div>
-
-  <div class="card">
-    <h3>Reference Image</h3>
-    <div class="upload-zone" id="img-zone" onclick="document.getElementById('img-input').click()">
-      <input type="file" id="img-input" accept="image/*" onchange="handleFile('image', this)">
-      <div class="upload-label" id="img-label">Click to upload reference image</div>
-      <img id="img-preview" class="preview-thumb" style="display:none;">
-    </div>
-  </div>
-
-  <div class="card">
-    <h3>Source Video</h3>
-    <div class="upload-zone" id="vid-zone" onclick="document.getElementById('vid-input').click()">
-      <input type="file" id="vid-input" accept="video/*" onchange="handleFile('video', this)">
-      <div class="upload-label" id="vid-label">Click to upload source video</div>
-      <video id="vid-preview" class="preview-thumb" style="display:none;" controls></video>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3>Mode</h3>
-    <div class="toggle-group">
-      <button class="toggle-btn active" id="mode-replace" onclick="setMode('replace')">Replacement</button>
-      <button class="toggle-btn" id="mode-animate" onclick="setMode('animate')">Animation</button>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3>Quality</h3>
-    <div class="toggle-group">
-      <button class="toggle-btn" id="q-fast" onclick="setQuality('fast')">Fast</button>
-      <button class="toggle-btn active" id="q-balanced" onclick="setQuality('balanced')">Balanced</button>
-      <button class="toggle-btn" id="q-high" onclick="setQuality('high')">High Quality</button>
-    </div>
-    <div class="hint">Fast = 480p, fewer steps, quickest. Balanced = recommended default. High Quality may exceed T4 capability -- if generation fails, drop to Balanced.</div>
-  </div>
-
-  <div class="card">
-    <button class="generate-btn" id="generate-btn" onclick="generate()" disabled>
-      GENERATE (start GPU first)
-    </button>
-    <div class="hint" id="generate-hint">
-      Current build: Generate opens ComfyUI directly with your files ready to load -- full one-click automation is still in progress. You'll upload the two files inside ComfyUI's own uploader and click Run there.
-    </div>
-  </div>
-</div>
 
 <script>
 const API = "https://wan22-backend-z71g.onrender.com";
-let state = { mode: "replace", quality: "balanced", image: null, video: null, gpuStatus: "OFFLINE", tunnelUrl: null };
-
-function setMode(m) {
-  state.mode = m;
-  document.getElementById("mode-replace").classList.toggle("active", m === "replace");
-  document.getElementById("mode-animate").classList.toggle("active", m === "animate");
-}
-
-function setQuality(q) {
-  state.quality = q;
-  ["fast","balanced","high"].forEach(k => {
-    document.getElementById("q-" + k).classList.toggle("active", k === q);
-  });
-}
-
-function handleFile(kind, input) {
-  const file = input.files[0];
-  if (!file) return;
-  const url = URL.createObjectURL(file);
-  if (kind === "image") {
-    state.image = file;
-    document.getElementById("img-preview").src = url;
-    document.getElementById("img-preview").style.display = "block";
-    document.getElementById("img-label").textContent = file.name;
-    document.getElementById("img-zone").classList.add("filled");
-  } else {
-    state.video = file;
-    document.getElementById("vid-preview").src = url;
-    document.getElementById("vid-preview").style.display = "block";
-    document.getElementById("vid-label").textContent = file.name;
-    document.getElementById("vid-zone").classList.add("filled");
-  }
-  updateGenerateButton();
-}
-
-function updateGenerateButton() {
-  const btn = document.getElementById("generate-btn");
-  const ready = state.gpuStatus === "RUNNING" && state.tunnelUrl && state.image && state.video;
-  btn.disabled = !ready;
-  if (state.gpuStatus !== "RUNNING") {
-    btn.textContent = "GENERATE (start GPU first)";
-  } else if (!state.image || !state.video) {
-    btn.textContent = "GENERATE (upload files first)";
-  } else {
-    btn.textContent = "OPEN COMFYUI TO GENERATE";
-  }
-}
-
-function generate() {
-  if (state.tunnelUrl) window.open(state.tunnelUrl, "_blank");
-}
+let redirected = false;
 
 async function refreshStatus() {
   try {
@@ -157,36 +41,37 @@ async function refreshStatus() {
 }
 
 function render(data) {
-  state.gpuStatus = data.status;
-  state.tunnelUrl = data.tunnel_url;
   const dot = document.getElementById("status-dot");
   const text = document.getElementById("status-text");
   const btnArea = document.getElementById("btn-area");
-  const link = document.getElementById("tunnel-link");
+  const hint = document.getElementById("hint-text");
 
   dot.className = "dot " + data.status.toLowerCase();
   text.textContent = data.status;
 
   if (data.status === "RUNNING") {
     btnArea.innerHTML = '<button class="stop-btn" onclick="stopGpu()">STOP GPU</button>';
+    if (data.tunnel_url && !redirected) {
+      redirected = true;
+      hint.textContent = "ComfyUI is ready -- redirecting now...";
+      setTimeout(() => { window.location.href = data.tunnel_url; }, 1500);
+    } else if (!data.tunnel_url) {
+      hint.textContent = "GPU is up, waiting for ComfyUI to finish starting...";
+    }
   } else if (data.status === "STARTING") {
     btnArea.innerHTML = '<button disabled>STARTING...</button>';
+    hint.textContent = "Starting GPU, this takes about 4-5 minutes...";
+    redirected = false;
   } else {
     btnArea.innerHTML = '<button class="start-btn" onclick="startGpu()">START GPU</button>';
+    hint.textContent = "Click Start GPU. Once it's ready, you'll be taken to ComfyUI automatically.";
+    redirected = false;
   }
-
-  if (data.tunnel_url) {
-    link.style.display = "block";
-    link.href = data.tunnel_url;
-    link.textContent = "ComfyUI ready -> " + data.tunnel_url;
-  } else {
-    link.style.display = "none";
-  }
-  updateGenerateButton();
 }
 
 async function startGpu() {
   document.getElementById("btn-area").innerHTML = '<button disabled>STARTING...</button>';
+  redirected = false;
   await fetch(`${API}/api/gpu/start`, { method: "POST" });
   refreshStatus();
 }
