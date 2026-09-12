@@ -53,8 +53,8 @@ function render(data) {
     btnArea.innerHTML = '<button class="stop-btn" onclick="stopGpu()">STOP GPU</button>';
     if (data.tunnel_url && !redirected) {
       redirected = true;
-      hint.textContent = "ComfyUI is ready -- redirecting now...";
-      setTimeout(() => { window.location.href = data.tunnel_url; }, 1500);
+      hint.textContent = "ComfyUI is ready -- opened in a new tab. Use Stop GPU here when done.";
+      setTimeout(() => { window.open(data.tunnel_url, "_blank"); }, 1000);
     } else if (!data.tunnel_url) {
       hint.textContent = "GPU is up, waiting for ComfyUI to finish starting...";
     }
