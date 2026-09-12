@@ -97,5 +97,13 @@ def gpu_start():
 @app.post("/api/gpu/stop", response_model=StatusResponse)
 def gpu_stop():
     STATE["status"] = "STOPPING"
+    try:
+        req = urllib.request.Request(
+            "https://ntfy.sh/wan22studio-deepfake807-stopsignal",
+            data=b"stop", method="POST"
+        )
+        urllib.request.urlopen(req, timeout=8)
+    except Exception:
+        pass
     return StatusResponse(status=STATE["status"], tunnel_url=STATE["tunnel_url"],
                            last_checked=time.time())

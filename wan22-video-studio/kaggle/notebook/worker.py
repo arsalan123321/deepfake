@@ -115,9 +115,26 @@ def main():
         notify("Wan2.2 worker: FAILED - no tunnel URL found")
         sys.exit(1)
 
-    log("Sleeping 25 minutes for manual testing.")
-    time.sleep(25 * 60)
-    notify("Wan2.2 worker: session time up, shutting down")
+    log("Waiting for stop signal or 25 minute timeout, checking every 15s.")
+    import urllib.request as _ur
+    stop_topic = "wan22studio-deepfake807-stopsignal"
+    deadline = time.time() + 25 * 60
+    stopped_by_signal = False
+    while time.time() < deadline:
+        time.sleep(15)
+        try:
+            req = _ur.Request(f"https://ntfy.sh/{stop_topic}/json?poll=1&since=30s")
+            with _ur.urlopen(req, timeout=8) as resp:
+                lines = resp.read().decode().strip().split("\n")
+            if any(line.strip() for line in lines):
+                log("STOP SIGNAL RECEIVED -- shutting down now")
+                stopped_by_signal = True
+                break
+        except Exception as e:
+            log(f"stop-signal check failed (non-fatal): {e}")
+    if not stopped_by_signal:
+        log("25 minute timeout reached")
+    notify("Wan2.2 worker: shutting down")
     tunnel_proc.terminate()
     comfy_proc.terminate()
 
