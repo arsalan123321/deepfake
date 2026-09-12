@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Wan2.2 Video Studio</title>
+<style>
+  body { background:#0b0b0f; color:#eee; font-family: -apple-system, sans-serif; display:flex; justify-content:center; padding-top:80px; }
+  .card { background:#16161d; border:1px solid #2a2a35; border-radius:16px; padding:32px; width:360px; text-align:center; }
+  .dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:8px; }
+  .offline { background:#666; }
+  .starting { background:#e0a72e; }
+  .running { background:#2ecc71; }
+  .error { background:#e74c3c; }
+  button { margin-top:20px; padding:12px 28px; border-radius:10px; border:none; font-size:15px; cursor:pointer; }
+  .start-btn { background:#3b82f6; color:white; }
+  .stop-btn { background:#e74c3c; color:white; }
+  #tunnel-link { display:block; margin-top:16px; color:#3b82f6; word-break:break-all; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h2>GPU ENGINE</h2>
+    <div><span id="status-dot" class="dot offline"></span><span id="status-text">OFFLINE</span></div>
+    <div id="btn-area"></div>
+    <a id="tunnel-link" href="#" target="_blank" style="display:none;"></a>
+  </div>
+
+<script>
+const API = "https://reimagined-trout-wvg6rgxx5w6526r9-8000.app.github.dev";
+
+async function refreshStatus() {
+  try {
+    const res = await fetch(`${API}/api/gpu/status`);
+    const data = await res.json();
+    render(data);
+  } catch (e) {
+    render({status: "ERROR", tunnel_url: null});
+  }
+}
+
+function render(data) {
+  const dot = document.getElementById("status-dot");
+  const text = document.getElementById("status-text");
+  const btnArea = document.getElementById("btn-area");
+  const link = document.getElementById("tunnel-link");
+
+  dot.className = "dot " + data.status.toLowerCase();
+  text.textContent = data.status;
+
+  if (data.status === "RUNNING") {
+    btnArea.innerHTML = '<button class="stop-btn" onclick="stopGpu()">STOP GPU</button>';
+  } else if (data.status === "STARTING") {
+    btnArea.innerHTML = '<button disabled>STARTING...</button>';
+  } else {
+    btnArea.innerHTML = '<button class="start-btn" onclick="startGpu()">START GPU</button>';
+  }
+
+  if (data.tunnel_url) {
+    link.style.display = "block";
+    link.href = data.tunnel_url;
+    link.textContent = "Open ComfyUI -> " + data.tunnel_url;
+  } else {
+    link.style.display = "none";
+  }
+}
+
+async function startGpu() {
+  document.getElementById("btn-area").innerHTML = '<button disabled>STARTING...</button>';
+  await fetch(`${API}/api/gpu/start`, { method: "POST" });
+  refreshStatus();
+}
+
+async function stopGpu() {
+  await fetch(`${API}/api/gpu/stop`, { method: "POST" });
+  refreshStatus();
+}
+
+refreshStatus();
+setInterval(refreshStatus, 8000); // poll every 10s
+</script>
+</body>
+</html>

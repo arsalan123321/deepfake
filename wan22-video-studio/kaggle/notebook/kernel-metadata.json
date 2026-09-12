@@ -1,0 +1,16 @@
+{
+  "id": "deepfake807/wan22-worker",
+  "title": "wan22-worker",
+  "code_file": "worker.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "keywords": [],
+  "dataset_sources": [],
+  "kernel_sources": [],
+  "competition_sources": [],
+  "model_sources": []
+}
