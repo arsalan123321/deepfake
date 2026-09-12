@@ -82,9 +82,36 @@ def main():
 
     workflows_dir = COMFY_DIR / "user" / "default" / "workflows"
     workflows_dir.mkdir(parents=True, exist_ok=True)
+    wf_path = workflows_dir / "wanvideo_WanAnimate_example_01.json"
     run_step("download WanAnimate example workflow",
-              ["curl", "-sL", "-o", str(workflows_dir / "wanvideo_WanAnimate_example_01.json"),
+              ["curl", "-sL", "-o", str(wf_path),
                "https://raw.githubusercontent.com/kijai/ComfyUI-WanVideoWrapper/main/example_workflows/wanvideo_WanAnimate_example_01.json"])
+
+    log("patching workflow: fixing known filenames and bypassing optional LoRA nodes")
+    wf_text = wf_path.read_text()
+    FILENAME_FIXES = {
+        "WanVideo\\2_2\\Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors": "Wan2.2-Animate-14B-Q2_K.gguf",
+        "umt5-xxl-enc-bf16.safetensors": "umt5-xxl-enc-bf16.safetensors",  # already correct filename, just ensuring path match
+        "wanvideo\\Wan2_1_VAE_bf16.safetensors": "Wan2_1_VAE_bf16.safetensors",
+    }
+    for old_name, new_name in FILENAME_FIXES.items():
+        wf_text = wf_text.replace(old_name, new_name)
+
+    import json as _json
+    try:
+        wf_json = _json.loads(wf_text)
+        bypassed = 0
+        for node in wf_json.get("nodes", []):
+            if node.get("type") == "WanVideo Lora Select Multi":
+                node["mode"] = 4  # 4 = bypass in ComfyUI
+                bypassed += 1
+        wf_text = _json.dumps(wf_json)
+        log(f"bypassed {bypassed} LoRA Select Multi node(s) automatically")
+    except Exception as e:
+        log(f"WARNING: could not parse workflow JSON to bypass LoRA nodes: {e}")
+
+    wf_path.write_text(wf_text)
+    log("workflow patched and saved")
 
     run_step("download cloudflared",
               ["wget", "-q", "-O", "/tmp/cloudflared",

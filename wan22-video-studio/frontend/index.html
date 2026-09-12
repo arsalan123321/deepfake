@@ -5,16 +5,18 @@
 <title>Wan2.2 Video Studio</title>
 <style>
   body { background:#0b0b0f; color:#eee; font-family: -apple-system, sans-serif; display:flex; justify-content:center; padding-top:80px; }
-  .card { background:#16161d; border:1px solid #2a2a35; border-radius:16px; padding:32px; width:360px; text-align:center; }
+  .card { background:#16161d; border:1px solid #2a2a35; border-radius:16px; padding:32px; width:380px; text-align:center; }
   .dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:8px; }
   .offline { background:#666; }
   .starting { background:#e0a72e; }
-  .running { background:#2ecc71; }
+  .running { background:#e0a72e; }
+  .connected { background:#2ecc71; }
   .error { background:#e74c3c; }
   .stopping { background:#e0a72e; }
-  button { margin-top:20px; padding:12px 28px; border-radius:10px; border:none; font-size:15px; cursor:pointer; }
+  button { margin-top:14px; padding:12px 28px; border-radius:10px; border:none; font-size:15px; cursor:pointer; display:block; width:100%; }
   .start-btn { background:#3b82f6; color:white; }
   .stop-btn { background:#e74c3c; color:white; }
+  .open-btn { background:#22c55e; color:white; }
   .hint { font-size:12px; color:#666; margin-top:16px; line-height:1.5; }
 </style>
 </head>
@@ -23,12 +25,12 @@
     <h2>GPU ENGINE</h2>
     <div><span id="status-dot" class="dot offline"></span><span id="status-text">OFFLINE</span></div>
     <div id="btn-area"></div>
-    <div class="hint" id="hint-text">Click Start GPU. Once it's ready, you'll be taken to ComfyUI automatically.</div>
+    <div id="open-area"></div>
+    <div class="hint" id="hint-text">Click Start GPU to begin.</div>
   </div>
 
 <script>
 const API = "https://wan22-backend-z71g.onrender.com";
-let redirected = false;
 
 async function refreshStatus() {
   try {
@@ -44,34 +46,46 @@ function render(data) {
   const dot = document.getElementById("status-dot");
   const text = document.getElementById("status-text");
   const btnArea = document.getElementById("btn-area");
+  const openArea = document.getElementById("open-area");
   const hint = document.getElementById("hint-text");
 
-  dot.className = "dot " + data.status.toLowerCase();
-  text.textContent = data.status;
+  let displayStatus = data.status;
+  let dotClass = data.status.toLowerCase();
+
+  if (data.status === "RUNNING" && data.tunnel_url) {
+    displayStatus = "CONNECTED";
+    dotClass = "connected";
+  }
+
+  dot.className = "dot " + dotClass;
+  text.textContent = displayStatus;
 
   if (data.status === "RUNNING") {
     btnArea.innerHTML = '<button class="stop-btn" onclick="stopGpu()">STOP GPU</button>';
-    if (data.tunnel_url && !redirected) {
-      redirected = true;
-      hint.textContent = "ComfyUI is ready -- opened in a new tab. Use Stop GPU here when done.";
-      setTimeout(() => { window.open(data.tunnel_url, "_blank"); }, 1000);
-    } else if (!data.tunnel_url) {
-      hint.textContent = "GPU is up, waiting for ComfyUI to finish starting...";
-    }
   } else if (data.status === "STARTING") {
     btnArea.innerHTML = '<button disabled>STARTING...</button>';
-    hint.textContent = "Starting GPU, this takes about 4-5 minutes...";
-    redirected = false;
   } else {
     btnArea.innerHTML = '<button class="start-btn" onclick="startGpu()">START GPU</button>';
-    hint.textContent = "Click Start GPU. Once it's ready, you'll be taken to ComfyUI automatically.";
-    redirected = false;
+  }
+
+  if (data.tunnel_url) {
+    openArea.innerHTML = `<button class="open-btn" onclick="window.open('${data.tunnel_url}', '_blank')">OPEN COMFYUI</button>`;
+    hint.textContent = "ComfyUI is ready. Click Open ComfyUI to start working.";
+  } else {
+    openArea.innerHTML = "";
+    if (data.status === "RUNNING") {
+      hint.textContent = "GPU is up, ComfyUI still starting (usually 1-2 more minutes)...";
+    } else if (data.status === "STARTING") {
+      hint.textContent = "Starting GPU, this takes about 4-5 minutes...";
+    } else {
+      hint.textContent = "Click Start GPU to begin.";
+    }
   }
 }
 
 async function startGpu() {
   document.getElementById("btn-area").innerHTML = '<button disabled>STARTING...</button>';
-  redirected = false;
+  document.getElementById("open-area").innerHTML = "";
   await fetch(`${API}/api/gpu/start`, { method: "POST" });
   refreshStatus();
 }
