@@ -34,7 +34,7 @@ CUSTOM_NODES = {
 
 MODEL_FILES = [
     ("QuantStack/Wan2.2-Animate-14B-GGUF", "Wan2.2-Animate-14B-Q2_K.gguf", "diffusion_models", "diffusion model"),
-    ("city96/umt5-xxl-encoder-gguf", "umt5-xxl-encoder-Q5_K_M.gguf", "text_encoders", "text encoder"),
+    ("Kijai/WanVideo_comfy", "umt5-xxl-enc-bf16.safetensors", "text_encoders", "text encoder (bf16, required by TextEncode Cached node)"),
     ("Kijai/WanVideo_comfy", "Wan2_1_VAE_bf16.safetensors", "vae", "VAE"),
     ("Comfy-Org/Wan_2.1_ComfyUI_repackaged", "split_files/clip_vision/clip_vision_h.safetensors", "clip_vision", "CLIP vision"),
 ]
