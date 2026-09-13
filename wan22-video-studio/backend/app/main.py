@@ -1,6 +1,6 @@
 """
 Wan2.2 Video Studio backend - GPU control + tunnel URL retrieval.
-Throttles ntfy.sh calls to avoid 429 rate limiting.
+Clears stale tunnel_url whenever the kernel isn't actually RUNNING.
 """
 import subprocess
 import time
@@ -39,7 +39,7 @@ def _run(cmd: list, timeout: int = 30):
 def _check_ntfy_for_url() -> Optional[str]:
     now = time.time()
     if now - NTFY_CACHE["last_poll_time"] < NTFY_CACHE["min_interval_s"]:
-        return None  # throttled -- skip this call, keep whatever we already have
+        return None
     NTFY_CACHE["last_poll_time"] = now
     try:
         req = urllib.request.Request(f"https://ntfy.sh/{NTFY_TOPIC}/json?poll=1&since=10m")
@@ -69,18 +69,16 @@ def gpu_status():
     STATE["last_checked"] = time.time()
     if code != 0:
         STATE["status"] = "ERROR"
+        STATE["tunnel_url"] = None
     elif "RUNNING" in out:
         STATE["status"] = "RUNNING"
         url = _check_ntfy_for_url()
         if url:
             STATE["tunnel_url"] = url
-    elif "COMPLETE" in out:
-        STATE["status"] = "OFFLINE"
-        STATE["tunnel_url"] = None
-    elif "CANCEL" in out:
-        STATE["status"] = "STOPPING"
     else:
-        STATE["status"] = "OFFLINE"
+        # anything not RUNNING (COMPLETE, CANCEL_*, ERROR text, etc.)
+        # means the GPU isn't actually usable right now -- clear stale URL
+        STATE["status"] = "STOPPING" if "CANCEL" in out else "OFFLINE"
         STATE["tunnel_url"] = None
     return StatusResponse(status=STATE["status"], tunnel_url=STATE["tunnel_url"],
                            last_checked=STATE["last_checked"])
@@ -90,7 +88,7 @@ def gpu_status():
 def gpu_start():
     STATE["status"] = "STARTING"
     STATE["tunnel_url"] = None
-    NTFY_CACHE["last_poll_time"] = 0  # allow immediate poll after a fresh start
+    NTFY_CACHE["last_poll_time"] = 0
     code, out, err = _run(["kaggle", "kernels", "push", "-p", str(KERNEL_DIR),
                             "--accelerator", "NvidiaTeslaT4"], timeout=60)
     if code != 0:
@@ -102,6 +100,7 @@ def gpu_start():
 @app.post("/api/gpu/stop")
 def gpu_stop():
     STATE["status"] = "STOPPING"
+    STATE["tunnel_url"] = None
     debug_error = None
     debug_status_code = None
     for attempt in range(3):
@@ -118,7 +117,7 @@ def gpu_stop():
         except Exception as e:
             debug_error = f"{type(e).__name__}: {e}"
             if "429" in str(e):
-                time.sleep(3 * (attempt + 1))  # backoff and retry on rate limit
+                time.sleep(3 * (attempt + 1))
                 continue
             break
     return {
