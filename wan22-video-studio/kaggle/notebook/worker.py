@@ -84,17 +84,10 @@ MODEL_FILES = [
     ("Comfy-Org/Wan_2.1_ComfyUI_repackaged", "split_files/clip_vision/clip_vision_h.safetensors", "clip_vision", "CLIP vision"),
 ]
 
-# substring -> replacement value, applied to any widgets_values string entry
-# that contains the substring (whole entry gets replaced, not just the match)
 VALUE_FIXES = {
     "Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors": "Wan2.2-Animate-14B-Q2_K.gguf",
 }
-
-# substrings that identify a value as "the bare correct VAE filename with an
-# extra path prefix" -- only fix if it's NOT already exactly correct
 VAE_CORRECT = "Wan2_1_VAE_bf16.safetensors"
-
-# substrings identifying LoRA nodes to bypass (optional accelerators)
 LORA_BYPASS_MARKERS = [
     "lightx2v_I2V_14B_480p_cfg_step_distill_rank64",
     "WanAnimate_relight_lora_fp16",
@@ -111,8 +104,6 @@ def patch_workflow(wf_path: Path) -> None:
         wv = node.get("widgets_values")
         if wv is None:
             continue
-
-        # widgets_values can be a list or (for some video nodes) a dict
         items = wv if isinstance(wv, list) else list(wv.values()) if isinstance(wv, dict) else []
 
         should_bypass = False
@@ -126,7 +117,7 @@ def patch_workflow(wf_path: Path) -> None:
         if should_bypass:
             node["mode"] = 4
             bypassed_count += 1
-            continue  # no need to also fix filenames on a bypassed node
+            continue
 
         if isinstance(wv, list):
             for i, item in enumerate(wv):
@@ -241,9 +232,9 @@ def main():
     while time.time() < deadline:
         time.sleep(15)
         try:
-            req = __import__("urllib.request", fromlist=["Request"]).Request(
-                f"https://ntfy.sh/{stop_topic}/json?poll=1&since=30s")
-            with __import__("urllib.request", fromlist=["urlopen"]).urlopen(req, timeout=8) as resp:
+            import urllib.request as _ur
+            req = _ur.Request(f"https://ntfy.sh/{stop_topic}/json?poll=1&since=30s")
+            with _ur.urlopen(req, timeout=8) as resp:
                 lines = resp.read().decode().strip().split("\n")
             if any(line.strip() for line in lines):
                 log("STOP SIGNAL RECEIVED -- shutting down now")
